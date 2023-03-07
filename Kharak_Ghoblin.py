@@ -39,7 +39,9 @@ class Enemy(Character):
         super().__init__(name, health, defense)
         self.damage = damage
     
-    def get_attack_damage(self):
+    def get_attack_damage(self, defense, damage):
+        self.defense = defense
+        self.damage = damage
         return self.damage, self.defense
 
     
@@ -53,31 +55,32 @@ class Fight:
         print(f"{self.hero.name} vs {self.enemy.name} - FIGHT !!!")
         loop = 0
         stunloop = 0
+
+        def battle_round(stunloop, user_dec):
+            enemy_damage, enemy_defense = self.enemy.get_attack_damage(random.randint(1,6), random.randint(1,10))
+            base_damage, hero_defense = self.hero.get_attack_damage(user_dec, random.randint(1,6))
+            prevent_minus_dmg = lambda damage, defense: max(defense - damage, 0)
+            if stunloop == 0:
+                self.hero.health -= prevent_minus_dmg(hero_defense, enemy_damage)
+                self.enemy.health -= prevent_minus_dmg(enemy_defense, base_damage)
+                print(f"{self.hero.name} attacked with {user_dec} strike for {base_damage} damage, and has a defense of {hero_defense}")
+            elif stunloop == 1:
+                print(f"{self.hero.name} attacked with {user_dec} strike for {base_damage} damage, and has a defense of {hero_defense}. Enemy is dazed from previsious round")
+                self.hero.health -= prevent_minus_dmg(hero_defense, 0)
+                self.enemy.health -= prevent_minus_dmg( round(enemy_defense * 0.5, None), base_damage)
+            print(f"{self.enemy.name} attacked for {enemy_damage} and it´s defense is {enemy_defense}")
+            print(f"{self.hero.name} ({self.hero.health}) - {self.enemy.name} ({self.enemy.health})")
+
         while self.hero.is_alive() and self.enemy.is_alive():
             loop += 1
             print(f"\nROUND {loop}")
             user_dec = input("what type of attack to strike with ? ")
-            if stunloop == 1:
-                enemy_damage, enemy_defense = self.enemy.get_attack_damage()
-                base_damage, hero_defense = self.hero.get_attack_damage(user_dec, random.randint(1,6))
-                prevent_minus_dmg = lambda damage, defense: max(damage - defense, 0)
-                self.hero.health -= prevent_minus_dmg(0, hero_defense)
-                self.enemy.health -= prevent_minus_dmg(base_damage, round(enemy_defense * 0.5, None))
-                stunloop = 0
-                print(f"{self.hero.name} attacked with {user_dec} strike for {base_damage} damage, and has a defense of {hero_defense}. Enemy is dazed from previsious round")
-                print(f"{self.enemy.name} attacked for {enemy_damage} and it´s defense is {enemy_defense}")
-             
-            elif stunloop == 0: 
-                enemy_damage, enemy_defense = self.enemy.get_attack_damage()
-                base_damage, hero_defense = self.hero.get_attack_damage(user_dec, random.randint(1,6))
-                prevent_minus_dmg = lambda damage, defense: max(damage - defense, 0)
-                self.hero.health -= prevent_minus_dmg(enemy_damage, hero_defense)
-                self.enemy.health -= prevent_minus_dmg(base_damage, enemy_defense)
-                print(f"{self.hero.name} attacked with {user_dec} strike for {base_damage} damage, and has a defense of {hero_defense}")
-                print(f"{self.enemy.name} attacked for {enemy_damage} and it´s defense is {enemy_defense}")
-                if user_dec == "stun":
-                    stunloop += 1 
-            print(f"{self.hero.name} ({self.hero.health}) - {self.enemy.name} ({self.enemy.health})")
+
+            battle_round(stunloop, user_dec)
+
+            if user_dec == "stun":
+                stunloop += 1 
+            
         if self.hero.is_alive():
             print(f"{self.hero.name} wins!")
         else:
