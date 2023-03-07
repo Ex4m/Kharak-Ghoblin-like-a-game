@@ -23,13 +23,13 @@ class Hero(Character):
         self.base_damage = base_damage
         if attack_type not in self.attacks:
             raise ValueError(f"{self.name} does not have the {attack_type} ready or learned")
-        elif attack_type == "basic":
+        elif attack_type == "SWING":
             return base_damage, self.defense
-        elif attack_type == "special":
-            return base_damage * 2, self.defense
-        elif attack_type == "ultimate":
+        elif attack_type == "REND":
+            return round(base_damage * 0.6, None), self.defense
+        elif attack_type == "MORTAL":
             return base_damage * 3, self.defense
-        elif attack_type == "stun":
+        elif attack_type == "STUN":
             return round(base_damage * 0.5, None), self.defense
         
 
@@ -51,12 +51,13 @@ class Fight:
         self.hero = hero
         self.enemy = enemy
         
+        
     def start_fight(self):
         print(f"{self.hero.name} vs {self.enemy.name} - FIGHT !!!")
         loop = 0
         stunloop = 0
-
-        def battle_round(stunloop, user_dec):
+        rend_target = 0
+        def battle_round(stunloop, rend_target, user_dec):
             enemy_damage, enemy_defense = self.enemy.get_attack_damage(random.randint(1,6), random.randint(1,10))
             base_damage, hero_defense = self.hero.get_attack_damage(user_dec, random.randint(1,6))
             prevent_minus_dmg = lambda damage, defense: max(defense - damage, 0)
@@ -64,19 +65,36 @@ class Fight:
                 self.hero.health -= prevent_minus_dmg(hero_defense, enemy_damage)
                 self.enemy.health -= prevent_minus_dmg(enemy_defense, base_damage)
                 print(f"{self.hero.name} attacked with {user_dec} strike for {base_damage} damage, and has a defense of {hero_defense}")
+                print(f"{self.enemy.name} attacked for {enemy_damage}  and it´s defense is {enemy_defense}")
+                
             elif stunloop == 1:
                 print(f"{self.hero.name} attacked with {user_dec} strike for {base_damage} damage, and has a defense of {hero_defense}. Enemy is dazed from previsious round")
                 self.hero.health -= prevent_minus_dmg(hero_defense, 0)
-                self.enemy.health -= prevent_minus_dmg( round(enemy_defense * 0.5, None), base_damage)
-            print(f"{self.enemy.name} attacked for {enemy_damage} and it´s defense is {enemy_defense}")
+                shaken_defense = round(enemy_defense * 0.4, None)
+                self.enemy.health -= prevent_minus_dmg( shaken_defense, base_damage)
+                stunloop = 0
+                print(f"{self.enemy.name} attacked for 0 and it´s defense is {shaken_defense}")
+            
+            if user_dec == "rend":
+                rend_target = loop + 3  
+            
+            print(loop)
+            print(rend_target) 
+            if loop <= rend_target and rend_target != 0:
+                rend_dmg = round(random.randint(1,5), None)  
+                self.enemy.health -= rend_dmg
+                rend_end_loop = rend_target - loop    
+                print(f"{self.hero.name} dealt additional {rend_dmg} damage to {self.enemy.name} from REND. It will stay on this target for {rend_end_loop} rounds ")
+               
             print(f"{self.hero.name} ({self.hero.health}) - {self.enemy.name} ({self.enemy.health})")
 
         while self.hero.is_alive() and self.enemy.is_alive():
             loop += 1
+            
             print(f"\nROUND {loop}")
-            user_dec = input("what type of attack to strike with ? ")
+            user_dec = input("what type of attack to strike with ? ").upper()
 
-            battle_round(stunloop, user_dec)
+            battle_round(stunloop, rend_target, user_dec)
 
             if user_dec == "stun":
                 stunloop += 1 
@@ -92,7 +110,7 @@ def dice_throw(how_many_sides):
     return random.randint(1,how_many_sides)
 
 
-hero = Hero("Hero", 100, random.randint(1,6), ["basic", "special", "ultimate", "stun"])
+hero = Hero("Hero", 100, random.randint(1,6), ["SWING", "REND", "MORTAL", "STUN"])
 enemy = Enemy("Enemy", 100, random.randint(1,6), random.randint(1,10))
 fight = Fight(hero, enemy)
 fight.start_fight()
