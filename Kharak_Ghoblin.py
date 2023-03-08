@@ -26,12 +26,20 @@ class Hero(Character):
         elif attack_type == "SWING":
             return base_damage, self.defense
         elif attack_type == "REND":
+            
+            
             return round(base_damage * 0.6, None), self.defense
         elif attack_type == "MORTAL":
             return base_damage * 3, self.defense
         elif attack_type == "STUN":
             return round(base_damage * 0.5, None), self.defense
+    
+    def Rend(self, base_damage, rounds_to_bleed):
+        self.base_damage = base_damage
+        self.rounds_to_bleed = rounds_to_bleed
+        initial_attack = round(base_damage * 0.6, None)
         
+        return 
 
  
 class Enemy(Character):
