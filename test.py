@@ -27,43 +27,44 @@ class Attack:
         if not defender.is_alive():
             print(f"{defender.name} has been defeated!")
          
-
+   
+        
 
 
 
 class Fight:
-    def __init__(self, hero, enemy, attack_types, stun_attack, dot_attack):
+    def __init__(self, hero, enemy, attack_types):
         self.hero = hero
         self.enemy = enemy
         self.attack_types = attack_types
-        self.stun_attack = stun_attack
-        self.dot_attack = dot_attack
+        
         
     def start_fight(self):
         print(f"{self.hero.name} vs {self.enemy.name}")
         loop = 1
         while self.hero.is_alive() and self.enemy.is_alive():
             print(f"\nROUND {loop}")
-            self.fight(self.hero, self.enemy, self.attack_types, self.stun_attack, self.dot_attack) # Hero attacks Enemy
+            self.fight(self.hero, self.enemy, self.attack_types) # Hero attacks Enemy
             if self.enemy.is_alive():
-                self.fight(self.enemy, self.hero, self.attack_types, self.stun_attack, self.dot_attack) # Enemy attacks hero
+                self.fight(self.enemy, self.hero, self.attack_types) # Enemy attacks hero
                 time.sleep(1)
             loop += 1
 
-    def fight(self, attacker, defender, attack_types, stun_attack, dot_attack):
+    def fight(self, attacker, defender, attack_types):
         print(f"{attacker.name} attacks {defender.name}")
         attack = random.choice(attack_types)
         damage = attack.damage + attacker.attack - defender.defense
         damage = max(damage, 0)
         defender.health -= damage
         print(f"{attack.name} does {damage} damage")
+        print(f"{defender.name} has {defender.defense} defense so the actual damage is {damage}-{defender.defense} = {damage-defender.defense}. Health of {defender.name} is now {defender.health}")
         if not defender.is_alive():
             print(f"{defender.name} has been defeated!")
         if isinstance(attack, Stun):
-            stun_attack.stun(attacker, defender)
+            stun_attack.stun(attacker, defender, 2)
         elif isinstance(attack, DotAttack):
-            dot_attack.rend(attacker, defender, 3) # assuming 3 rounds for simplicity
-        return
+            DotAttack.bleeding(self, defender, 3)
+
 
 
 
@@ -87,34 +88,39 @@ class Stun(Attack):
 
 class DotAttack(Attack):
     def __init__(self, name, damage):
-        super().__init__(name,damage)
-        
-    def rend(self, attacker, defender, rounds):
-        damage = self.damage + attacker.attack - defender.defense
-        damage = max(damage, 0)
-        total_damage = 0
-        for i in range(rounds):
-            defender.health -= damage
-            total_damage += damage
-            print(f"{attacker.name} uses {self.name} and does {damage} damage over {rounds-i} rounds")
-            if not defender.is_alive():
-                print(f"{defender.name} has bled out")
-                break
-            time.sleep(1)
-        return total_damage
+        super().__init__(name, damage)
+        self.bleed_round = 0
+        self.bleed_damage = 0
 
+    def rend(self, attacker, defender, bleed_round):
+        self.bleed_round = bleed_round
+        damage = self.damage - defender.defense
+        damage = max(damage, 0)
+        self.bleed_damage = round(self.damage * 0.5, None)
+        defender.health -= damage
+        print(f"{attacker.name} has applied BLEED to {defender.name} for {bleed_round} rounds")
+        return damage, bleed_round
+
+    def bleeding(self, target , bleed_round):
+        if self.bleed_round > 0:
+            target.health -= self.bleed_damage
+            self.bleed_round -= 1
+            print(f"{target.name} has bled for {self.bleed_damage}, so it has now {target.health} health. It will bleed for the next {self.bleed_round} rounds.")
+
+            
+        
 
 Hero = Character(100, 0, 0)
 Hero.set_name("Hero")
 Goblin = Character(80, 0, 0)
 Goblin.set_name("Goblin")
 
-attack_types = [Attack("swing", 10), Attack("punch", 7), Attack("ultimate strike", 20)]
+attack_types = [Attack("swing", 10), Attack("punch", 7), Attack("ultimate strike", 20), DotAttack("rend", 10)]
 stun_attack = Stun("STUN", 0 , 2)
 dot_attack = DotAttack("BLEED", 6)
 
 
-duel = Fight(Hero, Goblin, attack_types, stun_attack, dot_attack)
+duel = Fight(Hero, Goblin, attack_types)
 duel.start_fight()
 
 
