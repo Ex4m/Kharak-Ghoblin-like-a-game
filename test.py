@@ -1,6 +1,11 @@
 import random
 import time
 
+
+
+
+
+
 class Character:
     def __init__(self, health, attack, defense):
         self.health = health
@@ -45,31 +50,38 @@ class Fight:
         print("------------------------------------------------------------")
         while self.hero.is_alive() and self.enemy.is_alive():
             print(f"\nROUND {loop}")
-            self.fight(self.hero, self.enemy, self.attack_types, loop) # Hero attacks Enemy
+            self.fight(self.hero, self.enemy, self.attack_types) # Hero attacks Enemy
             if self.enemy.is_alive():
-                self.fight(self.enemy, self.hero, self.attack_types, loop) # Enemy attacks hero
+                self.fight(self.enemy, self.hero, self.attack_types) # Enemy attacks hero
                 time.sleep(1)
             loop += 1
         print("------------------------------------------------------------")
         
-    def fight(self, attacker, defender, attack_types, loop):
+    def fight(self, attacker, defender, attack_types):
         print(f"{attacker.name} attacks {defender.name}")
         attack = random.choice(attack_types)
         damage = attack.damage + attacker.attack - defender.defense
         damage = max(damage, 0)
         defender.health -= damage
         print(f"{attack.name} does {damage} damage")
-        print(f"{defender.name} has {defender.defense} defense so the actual damage is {damage}-{defender.defense} = {damage-defender.defense}. Health of {defender.name} is now {defender.health}")
+        print(f"{defender.name} has {defender.defense} defense so the actual damage is {attack.damage + attacker.attack}-{defender.defense} = {damage}. Health of {defender.name} is now {defender.health}")
+        try:
+            if defender.is_bleeding:
+                print(f"{defender.name} is bleeding !!!")
+                rend = [attack for attack in attack_types if isinstance(attack, DotAttack) and attack.name == "rend"][0]
+                rend.bleed(defender)
+        except:
+            pass
         if not defender.is_alive():
             print(f"{defender.name} has been defeated!")
+        
         if isinstance(attack, Stun):
-            stun_attack.stun(attacker, defender, 2)
+            attack.stun(attacker, defender)
         elif isinstance(attack, DotAttack):
-            damage, bleed_rounds, bleed_damage = attack.rend(attacker, defender)
-            if bleed_rounds > 0:
-                print(f"{defender.name} is bleeding")
-                bleed_rounds, bleed_damage = attack.bleeding(defender)
-
+            damage, bleed_damage, bleed_rounds, is_bleeding = attack.rend(attacker, defender)
+            defender.bleed_rounds = bleed_rounds
+            defender.is_bleeding = is_bleeding
+        
 
           
 
@@ -82,20 +94,25 @@ class DotAttack(Attack):
     def rend(self, attacker, defender):
         damage = self.damage - defender.defense
         damage = max(damage, 0)
-        self.bleed_damage = round(self.damage * 0.5, None)
+        bleed_damage = round(self.damage * 0.5, None)
         defender.health -= damage
         print(f"{attacker.name} has applied BLEED to {defender.name} for {self.bleed_rounds} rounds")
-        return damage, self.bleed_rounds, self.bleed_damage
+        defender.bleed_rounds = self.bleed_rounds     #Here I apply bleed rounds to object of defender
+        defender.is_bleeding = True
+        return damage, bleed_damage , defender.bleed_rounds, defender.is_bleeding
 
-    def bleeding(self, defender):
-        if self.bleed_rounds > 0:
+    def bleed(self, defender):
+        if defender.bleed_rounds > 0:
             bleeding = round(self.bleed_damage * 0.4, None)
             defender.health -= bleeding
-            self.bleed_rounds -= 1
-            print(f"{defender.name} has bled for {bleeding}, so it has now {defender.health} health. It will bleed for the next {self.bleed_rounds} rounds.")
-        return self.bleed_rounds, self.bleed_damage
+            defender.bleed_rounds -= 1
+            print(f"{defender.name} has bled for {bleeding}, so it has now {defender.health} health. It will bleed for the next {defender.bleed_rounds} rounds.")
+        else:
+            defender.is_bleeding = False
+        return self.bleed_damage, defender.bleed_rounds, defender.is_bleeding
 
-
+    def is_bleeding(self):
+        return self.bleed_rounds > 0
 
 
 class Stun(Attack):
@@ -117,15 +134,24 @@ class Stun(Attack):
             
         
 
-Hero = Character(100, 0, 0)
-Hero.set_name("Hero")
-Goblin = Character(80, 0, 0)
-Goblin.set_name("Goblin")
 
-attack_types = [Attack("swing", 5), Attack("punch", 6), Attack("ultimate strike", 10), DotAttack("rend", 5, 3, 4)]
-stun_attack = Stun("STUN", 0 , 2)
+def roll_dice(from_side, to_side):
+    return random.randint(from_side, to_side)
 
 
+
+Hero = Character(100, 10, 5)
+Hero.set_name("The Gargix (Hero)")
+Goblin = Character(80, 8, 4)
+Goblin.set_name("Awaken Goblin")
+
+attack_types = [
+    Attack("swing", roll_dice(2,5)),
+    Attack("punch", roll_dice(1,8)),
+    Attack("ultimate strike", roll_dice(6,12)),
+    DotAttack("rend", roll_dice(2,6), 3, roll_dice(4,6)),
+    Stun("stun", roll_dice(1,2), 2)
+]
 
 duel = Fight(Hero, Goblin, attack_types)
 duel.start_fight()
