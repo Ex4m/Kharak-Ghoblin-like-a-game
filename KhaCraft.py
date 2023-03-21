@@ -53,6 +53,7 @@ class Fight:
             print(f"\nROUND {loop}")
             self.fight(self.hero, self.enemy, self.attack_types) # Hero attacks Enemy
             if self.enemy.is_alive():
+                print("*******************************************")
                 self.fight(self.enemy, self.hero, self.attack_types) # Enemy attacks hero
                 time.sleep(1)
             loop += 1
@@ -79,7 +80,7 @@ class Fight:
         except:
             pass
         if not defender.is_alive():
-            print(f"{defender.name} has been defeated!")
+            return print(f"<<<   {defender.name} has been defeated!    >>>")
         
         if isinstance(attack, Stun):
             defense, stun_rounds, is_stunned, def_decrement = attack.stun(attacker, defender)
