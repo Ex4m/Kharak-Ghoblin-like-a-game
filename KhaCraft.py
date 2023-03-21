@@ -12,6 +12,7 @@ class Character:
         self.attack = attack
         self.defense = defense
         self.name = ""
+        self.initial_health = health
 
     def set_name(self, name):
         self.name = name
@@ -32,7 +33,7 @@ class Attack:
         if not defender.is_alive():
             print(f"{defender.name} has been defeated!")
          
-   
+    
         
 
 
@@ -60,6 +61,8 @@ class Fight:
     def fight(self, attacker, defender, attack_types):
         print(f"{attacker.name} attacks {defender.name}")
         attack = random.choice(attack_types)
+        if attack.name == "heal":
+            return attack.heal(attacker)
         damage = attack.damage + attacker.attack - defender.defense
         damage = max(damage, 0)
         defender.health -= damage
@@ -70,13 +73,20 @@ class Fight:
                 print(f"{defender.name} is bleeding !!!")
                 rend = [attack for attack in attack_types if isinstance(attack, DotAttack) and attack.name == "rend"][0]
                 rend.bleed(defender)
+            if defender.is_stunned:
+                stunned = Stun("stun",5,2) #[attack for attack in attack_types if isinstance(attack, Stun) and attack.name == "stun"][0]
+                stunned.stunned(defender)
         except:
             pass
         if not defender.is_alive():
             print(f"{defender.name} has been defeated!")
         
         if isinstance(attack, Stun):
-            attack.stun(attacker, defender)
+            defense, stun_rounds, is_stunned, def_decrement = attack.stun(attacker, defender)
+            defender.defense = defense
+            defender.stun_rounds = stun_rounds
+            defender.is_stunned = is_stunned
+            defender.def_decrement = def_decrement
         elif isinstance(attack, DotAttack):
             damage, bleed_damage, bleed_rounds, is_bleeding = attack.rend(attacker, defender)
             defender.bleed_rounds = bleed_rounds
@@ -111,28 +121,49 @@ class DotAttack(Attack):
             defender.is_bleeding = False
         return self.bleed_damage, defender.bleed_rounds, defender.is_bleeding
 
-    def is_bleeding(self):
-        return self.bleed_rounds > 0
+    
 
 
 class Stun(Attack):
-    def __init__(self, name, damage, rounds):
+    def __init__(self, name, damage, stun_rounds):
         super().__init__(name,damage)
-        self.rounds = rounds
+        self.stun_rounds = stun_rounds
         
     def stun(self, attacker, defender):
         print(f"{attacker.name} uses {self.name} and stuns {defender.name}")
         defender.defense -= 5
+        defender.def_decrement = defender.defense
         defender.defense = max(defender.defense, 0)
-        for i in range(self.rounds):
-            print(f"\nROUND {i+1}")
-            if defender.is_alive():
-                print(f"{defender.name} has recovered from stun and his defense not lowered anymore")
-            else:
-                break
-        defender.defense += 5
-            
+        defender.stun_rounds = self.stun_rounds
+        defender.is_stunned = True
+        return defender.defense, defender.stun_rounds, defender.is_stunned, defender.def_decrement
         
+    def stunned(self, defender):
+        if defender.stun_rounds > 0:
+            defender.attack = 0
+            defender.stun_rounds -= 1
+            print(f"{defender.name} is stunned!!!")
+        else:
+            defender.is_stunned = False
+            defender.defense += 5 - defender.def_decrement
+            print(f"{defender.name} has recovered from stun and his defense not lowered anymore")    
+        return defender.stun_rounds, defender.is_stunned, defender.defense  
+            
+class Heal(Attack):
+    def __init__(self, name, healed):
+        self.name = name
+        self.healed = healed
+        
+    def heal(self, attacker):
+        actual_hp = attacker.health
+        actual_hp += self.healed
+        if actual_hp < attacker.initial_health:
+            attacker.health += self.healed
+            print(f"{attacker.name} healed himself for {self.healed} hit points and has now {attacker.health} of {attacker.initial_health} HP")
+        else:
+            lesser_heal = attacker.initial_health - actual_hp
+            attacker.health = attacker.initial_health
+            print(f"{attacker.name} healed himself for {lesser_heal} hit points and has now {attacker.health} of {attacker.initial_health} HP")
 
 
 def roll_dice(from_side, to_side):
@@ -149,9 +180,10 @@ attack_types = [
     Attack("swing", roll_dice(2,5)),
     Attack("punch", roll_dice(1,8)),
     Attack("ultimate strike", roll_dice(6,12)),
+    Heal("heal",roll_dice(4,12)),
     DotAttack("rend", roll_dice(2,6), 3, roll_dice(4,6)),
     Stun("stun", roll_dice(1,2), 2)
-]
+    ]
 
 duel = Fight(Hero, Goblin, attack_types)
 duel.start_fight()
